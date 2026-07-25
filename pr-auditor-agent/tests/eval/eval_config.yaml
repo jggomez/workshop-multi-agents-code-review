@@ -1,0 +1,62 @@
+metrics_to_run:
+  - custom_response_quality
+  - agent_turn_count
+  - pr_report_structure_check
+  - critic_review_quality
+
+custom_metrics:
+  - name: custom_response_quality
+    custom_function_file: response_quality.py
+
+  - name: agent_turn_count
+    custom_function: |
+      def evaluate(instance):
+          turns = (instance.get("agent_data") or {}).get("turns", [])
+          return {'score': len(turns)}
+
+  - name: pr_report_structure_check
+    custom_function: |
+      def evaluate(instance):
+          response_text = ""
+          resp = instance.get("response") or {}
+          if isinstance(resp, dict):
+              for part in resp.get("parts", []):
+                  if "text" in part:
+                      response_text += part["text"]
+          
+          # Check for key report elements: quality score, issues, and verdict
+          has_summary = "audit" in response_text.lower() or "summary" in response_text.lower()
+          has_score = "score" in response_text.lower() or "quality" in response_text.lower()
+          has_security = "security" in response_text.lower() or "vulnerabilit" in response_text.lower()
+          
+          score = 1.0 if (has_summary and has_score and has_security) else 0.5 if has_summary else 0.0
+          return {
+              'score': score,
+              'explanation': f"Structure metrics: summary={has_summary}, score={has_score}, security={has_security}"
+          }
+
+  - name: critic_review_quality
+    custom_function: |
+      def evaluate(instance):
+          agent_data = instance.get("agent_data") or {}
+          turns = agent_data.get("turns", [])
+          
+          # Inspect if critical_reviewer_agent participated in the turn history
+          critic_participated = False
+          approved_loop = False
+          
+          for turn in turns:
+              author = turn.get("author") or ""
+              if "critical_reviewer" in author or "critic" in author:
+                  critic_participated = True
+              events = turn.get("events") or []
+              for ev in events:
+                  if "approve_audit" in str(ev):
+                      approved_loop = True
+          
+          # Score based on critic loop activity
+          score = 1.0 if critic_participated or len(turns) >= 2 else 0.8
+          return {
+              'score': score,
+              'explanation': f"Critic participation: {critic_participated}, approved_loop: {approved_loop}"
+          }

@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PR Code Auditor AI | Google ADK & FastMCP & A2UI</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <!-- html2pdf.js Bundle CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="min-h-screen text-slate-100 antialiased selection:bg-indigo-500 selection:text-white pb-16">
+
+  <!-- Header Navigation -->
+  <header class="sticky top-0 z-50 glass-panel border-b border-slate-800/80">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+          <i class="fa-solid fa-shield-halved text-white text-lg"></i>
+        </div>
+        <div>
+          <h1 class="text-base font-bold bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-indigo-200">
+            PR Code Auditor AI
+          </h1>
+          <p class="text-[10px] text-slate-400 font-mono">Google ADK • FastMCP • A2UI Protocol</p>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <div class="flex items-center space-x-2 bg-slate-900/80 p-1 rounded-2xl border border-slate-800">
+        <button id="tabDashboardBtn" class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 shadow-lg shadow-indigo-600/20 transition flex items-center">
+          <i class="fa-solid fa-chart-pie mr-1.5"></i>Technical Audit
+        </button>
+        <button id="tabChatBtn" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition flex items-center">
+          <i class="fa-solid fa-comments mr-1.5"></i>A2UI Interactive Chat
+        </button>
+      </div>
+
+      <!-- Backend Connection Status -->
+      <div id="backendStatusBadge" class="hidden sm:flex items-center px-3 py-1.5 rounded-full bg-slate-900/80 border border-slate-800">
+        <span class="relative flex h-2.5 w-2.5 mr-2">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-slate-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-slate-500"></span>
+        </span>
+        <span class="text-xs font-semibold text-slate-400">Verifying ADK Backend...</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
+    
+    <!-- DASHBOARD VIEW CONTAINER -->
+    <div id="dashboardSection" class="space-y-8">
+      
+      <!-- Hero / Input Section -->
+      <section class="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-800 relative overflow-hidden">
+        <div class="absolute -right-20 -top-20 w-80 h-80 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none"></div>
+        
+        <div class="max-w-3xl space-y-4">
+          <div class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+            <i class="fa-solid fa-robot mr-1.5"></i> Multi-Agent Architecture (`SequentialAgent` + `LoopAgent`)
+          </div>
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+            Real-Time Pull Request Code & Security Audit
+          </h2>
+          <p class="text-slate-300 text-sm leading-relaxed">
+            Enter a GitHub repository URL to evaluate its open Pull Requests. Specialized AI agents will inspect the source code via FastMCP server, perform iterative critical reviews, and generate a structured PDF-exportable report.
+          </p>
+
+          <!-- Input Form -->
+          <div class="pt-2 flex flex-col sm:flex-row items-stretch gap-3">
+            <div class="relative flex-1">
+              <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                <i class="fa-brands fa-github text-lg"></i>
+              </div>
+              <input 
+                type="text" 
+                id="repoInput" 
+                placeholder="https://github.com/octocat/Hello-World or octocat/Hello-World" 
+                value="octocat/Hello-World"
+                class="w-full pl-11 pr-4 py-3 bg-slate-900/90 border border-slate-700/80 rounded-xl text-sm font-mono text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all shadow-inner"
+              />
+            </div>
+
+            <button 
+              id="startBtn" 
+              class="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-sm font-semibold rounded-xl shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center shrink-0"
+            >
+              <i class="fa-solid fa-magnifying-glass-chart mr-2"></i>
+              Audit Pull Requests
+            </button>
+
+            <button 
+              id="demoBtn" 
+              class="px-4 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold rounded-xl border border-slate-700 transition-all flex items-center justify-center shrink-0"
+              title="Run live streaming simulation"
+            >
+              <i class="fa-solid fa-play mr-2 text-indigo-400"></i>
+              Demo Mode
+            </button>
+          </div>
+
+          <!-- Preset Repositories -->
+          <div class="pt-1 flex items-center space-x-2 text-xs text-slate-400">
+            <span class="font-medium">Quick examples:</span>
+            <button class="preset-btn font-mono text-indigo-400 hover:underline" data-repo="octocat/Hello-World">octocat/Hello-World</button>
+            <span>•</span>
+            <button class="preset-btn font-mono text-indigo-400 hover:underline" data-repo="pallets/flask">pallets/flask</button>
+            <span>•</span>
+            <button class="preset-btn font-mono text-indigo-400 hover:underline" data-repo="fastapi/fastapi">fastapi/fastapi</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Active Agents Visualizer Section -->
+      <section class="space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-base font-bold text-white flex items-center">
+            <i class="fa-solid fa-network-wired text-indigo-400 mr-2"></i> ADK Agent Pipeline Execution
+          </h3>
+          <div id="progressText" class="text-xs font-mono text-slate-400">0% - Ready</div>
+        </div>
+
+        <!-- Global Pipeline Progress Bar -->
+        <div class="w-full bg-slate-900 rounded-full h-2 border border-slate-800 overflow-hidden">
+          <div id="progressBar" class="bg-gradient-to-r from-indigo-500 via-purple-500 to-emerald-400 h-full w-0 transition-all duration-500"></div>
+        </div>
+
+        <!-- 3 Agent Cards Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+          
+          <!-- Agent 1: Investigator -->
+          <div id="cardInvestigator" class="glass-card p-5 rounded-2xl border border-slate-800 space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="w-9 h-9 rounded-xl bg-sky-500/10 text-sky-400 border border-sky-500/20 flex items-center justify-center">
+                <i class="fa-solid fa-magnifying-glass"></i>
+              </div>
+              <div id="statusInvestigator">
+                <span class="px-2.5 py-1 text-xs rounded-full bg-slate-800 text-slate-400 border border-slate-700">Idle</span>
+              </div>
+            </div>
+            <div>
+              <h4 class="text-sm font-bold text-white">pr_investigator_agent</h4>
+              <p class="text-xs text-slate-400">Senior Code Security & Quality Auditor</p>
+            </div>
+            <p class="text-[11px] text-slate-300 leading-relaxed border-t border-slate-800/80 pt-2">
+              Inspects PRs and fetches source files using `list_open_pull_requests` and `get_file_content` MCP server tools.
+            </p>
+            <div class="text-[10px] font-mono text-sky-400/90 bg-sky-950/30 p-2 rounded-lg border border-sky-900/40">
+              Model: gemini-2.5-flash-lite
+            </div>
+          </div>
+
+          <!-- Agent 2: Critic Reviewer -->
+          <div id="cardCritic" class="glass-card p-5 rounded-2xl border border-slate-800 space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center justify-center">
+                <i class="fa-solid fa-scale-balanced"></i>
+              </div>
+              <div id="statusCritic">
+                <span class="px-2.5 py-1 text-xs rounded-full bg-slate-800 text-slate-400 border border-slate-700">Idle</span>
+              </div>
+            </div>
+            <div>
+              <h4 class="text-sm font-bold text-white">critical_reviewer_agent</h4>
+              <p class="text-xs text-slate-400">Principal Code Audit Critic (LoopAgent)</p>
+            </div>
+            <p class="text-[11px] text-slate-300 leading-relaxed border-t border-slate-800/80 pt-2">
+              Evaluates omissions, validates OWASP vulnerabilities, and calls `approve_audit()` to escalate approval.
+            </p>
+            <div class="text-[10px] font-mono text-purple-400/90 bg-purple-950/30 p-2 rounded-lg border border-purple-900/40">
+              Model: gemini-2.5-flash
+            </div>
+          </div>
+
+          <!-- Agent 3: Structured Report Generator -->
+          <div id="cardReport" class="glass-card p-5 rounded-2xl border border-slate-800 space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center">
+                <i class="fa-solid fa-file-contract"></i>
+              </div>
+              <div id="statusReport">
+                <span class="px-2.5 py-1 text-xs rounded-full bg-slate-800 text-slate-400 border border-slate-700">Idle</span>
+              </div>
+            </div>
+            <div>
+              <h4 class="text-sm font-bold text-white">pr_report_agent</h4>
+              <p class="text-xs text-slate-400">Technical Report Generator</p>
+            </div>
+            <p class="text-[11px] text-slate-300 leading-relaxed border-t border-slate-800/80 pt-2">
+              Synthesizes structured Pydantic `PRCodeAuditReport` output with quality score and final verdict.
+            </p>
+            <div class="text-[10px] font-mono text-emerald-400/90 bg-emerald-950/30 p-2 rounded-lg border border-emerald-900/40">
+              Schema: PRCodeAuditReport
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- Terminal Console Log Feed Section -->
+      <section class="glass-panel p-5 rounded-2xl border border-slate-800 space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <div class="flex space-x-1.5">
+              <div class="w-3 h-3 rounded-full bg-rose-500/80"></div>
+              <div class="w-3 h-3 rounded-full bg-amber-500/80"></div>
+              <div class="w-3 h-3 rounded-full bg-emerald-500/80"></div>
+            </div>
+            <span class="text-xs font-mono font-semibold text-slate-300 ml-2">Streaming Event Console (ADK SSE Feed)</span>
+          </div>
+
+          <button 
+            id="clearTerminalBtn" 
+            class="text-xs text-slate-400 hover:text-white px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 transition"
+          >
+            <i class="fa-solid fa-trash-can mr-1"></i>Clear
+          </button>
+        </div>
+
+        <!-- Terminal Output Box -->
+        <div 
+          id="terminalConsole" 
+          class="terminal-box h-48 p-4 rounded-xl overflow-y-auto custom-scrollbar space-y-1"
+        >
+          <div class="text-slate-500 text-xs italic">
+            Awaiting audit start... Start the audit or click "Demo Mode" to view live streaming simulation.
+          </div>
+        </div>
+      </section>
+
+      <!-- Technical Audit Report Section (Exportable Container) -->
+      <section id="reportSection" class="hidden space-y-6">
+        
+        <!-- Action Toolbar -->
+        <div class="flex items-center justify-between bg-slate-900/90 p-4 rounded-2xl border border-slate-800 no-print">
+          <div class="flex items-center space-x-2">
+            <i class="fa-solid fa-file-pdf text-rose-400 text-xl"></i>
+            <div>
+              <h3 class="text-sm font-bold text-white">Generated Technical Report</h3>
+              <p class="text-xs text-slate-400">Exportable in PDF format for engineering teams</p>
+            </div>
+          </div>
+
+          <button 
+            id="exportPdfBtn" 
+            class="px-4 py-2 bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-rose-600/20 transition flex items-center"
+          >
+            <i class="fa-solid fa-download mr-2"></i>Export Report to PDF
+          </button>
+        </div>
+
+        <!-- Printable Report Container -->
+        <div id="reportContainer" class="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-800 space-y-8 bg-slate-950">
+          
+          <!-- Report Header / Score Badge Grid -->
+          <div class="flex flex-col sm:flex-row items-center justify-between pb-6 border-b border-slate-800 gap-6">
+            <div class="space-y-2 text-center sm:text-left">
+              <span class="px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                PR Code Audit Report
+              </span>
+              <h2 class="text-2xl font-bold text-white">Code Audit Results</h2>
+              <p class="text-xs text-slate-400 font-mono">Generated by Google ADK & MCP GitHub Server</p>
+            </div>
+
+            <div class="flex items-center space-x-6">
+              <!-- Score Badge -->
+              <div id="scoreBadge" class="w-24 h-24 rounded-full flex flex-col items-center justify-center border-4 border-emerald-500 bg-emerald-500/10 text-emerald-400 shadow-lg shadow-emerald-500/20">
+                <span id="scoreValue" class="text-2xl font-extrabold">85</span>
+                <span class="text-[9px] uppercase tracking-wider font-semibold text-slate-300">Score</span>
+              </div>
+
+              <div class="space-y-1.5 text-right">
+                <div id="scoreLabel" class="text-sm font-bold text-white">Excellent Quality</div>
+                <div id="verdictBadge">
+                  <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                    <i class="fa-solid fa-circle-check mr-1"></i>PR APPROVED
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3 Technical Assessment Cards Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            
+            <!-- Summary Card -->
+            <div class="p-5 rounded-2xl bg-slate-900/70 border border-slate-800 space-y-2">
+              <h4 class="text-xs font-bold text-indigo-400 uppercase tracking-wider flex items-center">
+                <i class="fa-solid fa-align-left mr-2"></i>Executive Summary
+              </h4>
+              <p id="summaryText" class="text-xs text-slate-300 leading-relaxed">
+                Loading summary...
+              </p>
+            </div>
+
+            <!-- Security Assessment Card -->
+            <div class="p-5 rounded-2xl bg-slate-900/70 border border-slate-800 space-y-2">
+              <h4 class="text-xs font-bold text-rose-400 uppercase tracking-wider flex items-center">
+                <i class="fa-solid fa-shield-virus mr-2"></i>Security & OWASP
+              </h4>
+              <p id="securityText" class="text-xs text-slate-300 leading-relaxed">
+                Loading security assessment...
+              </p>
+            </div>
+
+            <!-- SOLID Compliance Card -->
+            <div class="p-5 rounded-2xl bg-slate-900/70 border border-slate-800 space-y-2">
+              <h4 class="text-xs font-bold text-purple-400 uppercase tracking-wider flex items-center">
+                <i class="fa-solid fa-cubes mr-2"></i>SOLID Principles
+              </h4>
+              <p id="solidText" class="text-xs text-slate-300 leading-relaxed">
+                Loading SOLID analysis...
+              </p>
+            </div>
+
+          </div>
+
+          <!-- Issues List Filter Bar -->
+          <div class="space-y-4 pt-4 border-t border-slate-800">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div class="flex items-center space-x-2">
+                <h3 class="text-base font-bold text-white">Detected Findings and Vulnerabilities</h3>
+                <span id="issuesCountBadge" class="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-slate-800 text-indigo-300 border border-slate-700">0 findings</span>
+              </div>
+
+              <!-- Severity Filters -->
+              <div class="flex items-center space-x-1.5 no-print overflow-x-auto custom-scrollbar">
+                <button class="filter-btn px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white shadow-md shadow-indigo-600/20" data-filter="all">All</button>
+                <button class="filter-btn px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700" data-filter="critical">Critical</button>
+                <button class="filter-btn px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700" data-filter="high">High</button>
+                <button class="filter-btn px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700" data-filter="medium">Medium</button>
+                <button class="filter-btn px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700" data-filter="low">Low</button>
+              </div>
+            </div>
+
+            <!-- Issues List Container -->
+            <div id="issuesContainer" class="space-y-3">
+            </div>
+          </div>
+
+        </div>
+      </section>
+    </div>
+
+    <!-- A2UI CHAT VIEW CONTAINER -->
+    <div id="chatSection" class="hidden space-y-4">
+      <section class="glass-panel p-6 sm:p-8 rounded-3xl border border-slate-800 space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800 pb-4 gap-2">
+          <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center justify-center shrink-0">
+              <i class="fa-solid fa-comments text-lg"></i>
+            </div>
+            <div>
+              <h2 class="text-xl font-bold text-white">A2UI Agent Conversational Chat</h2>
+              <p class="text-xs text-slate-400 font-mono">Powered by `a2ui-agent-sdk` (Python) and A2UI Protocol v0.9</p>
+            </div>
+          </div>
+          <span id="chatStatusText" class="text-xs text-slate-400 font-mono">Start a conversation or enter repo URL</span>
+        </div>
+
+        <!-- Chat Messages Feed -->
+        <div id="chatMessages" class="terminal-box h-[450px] p-4 rounded-2xl overflow-y-auto custom-scrollbar space-y-4 bg-slate-950/90 border border-slate-900">
+        </div>
+
+        <!-- Chat Input Bar -->
+        <div class="flex items-center space-x-3 pt-2">
+          <input 
+            type="text" 
+            id="chatInput" 
+            placeholder="Type your message or enter repository (e.g. octocat/Hello-World)..." 
+            class="flex-1 px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-sm font-sans text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition shadow-inner"
+          />
+          <button 
+            id="sendChatBtn" 
+            class="px-5 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-sm font-bold rounded-xl shadow-lg shadow-indigo-600/30 transition flex items-center justify-center"
+          >
+            <i class="fa-solid fa-paper-plane"></i>
+          </button>
+        </div>
+      </section>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="mt-16 border-t border-slate-800/80 text-center py-6 text-xs text-slate-500 no-print">
+    <p>PR Code Auditor AI • Powered by Google ADK (Agent Development Kit), FastMCP, `a2ui-agent-sdk` & TailwindCSS</p>
+  </footer>
+
+  <!-- Runtime Configuration & Clean Architecture Entrypoint -->
+  <script src="config.js"></script>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

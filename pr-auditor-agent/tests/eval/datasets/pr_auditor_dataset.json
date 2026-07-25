@@ -1,0 +1,59 @@
+{
+  "eval_cases": [
+    {
+      "eval_case_id": "pr_audit_octocat_helloworld",
+      "prompt": {
+        "role": "user",
+        "parts": [
+          {
+            "text": "Please list the open pull requests for the repository 'octocat/Hello-World', inspect all file contents, and generate a structured code audit report detailing security vulnerabilities and code smells."
+          }
+        ]
+      }
+    },
+    {
+      "eval_case_id": "pr_audit_flask_repo",
+      "prompt": {
+        "role": "user",
+        "parts": [
+          {
+            "text": "Perform a complete technical code audit on open pull requests for repository 'pallets/flask'. Identify any security flaws, secret leaks, or SOLID principle violations."
+          }
+        ]
+      }
+    },
+    {
+      "eval_case_id": "pr_audit_specific_pr",
+      "prompt": {
+        "role": "user",
+        "parts": [
+          {
+            "text": "Audit PR #42 for repository 'expressjs/express'. Retrieve the files changed in this PR and provide a structured quality score and list of recommendations."
+          }
+        ]
+      }
+    },
+    {
+      "eval_case_id": "pr_audit_solid_check",
+      "prompt": {
+        "role": "user",
+        "parts": [
+          {
+            "text": "Conduct a SOLID principles and OWASP vulnerability review for repository 'django/django'. Fetch code files using MCP tools and output a structured report."
+          }
+        ]
+      }
+    },
+    {
+      "eval_case_id": "pr_audit_dockerfile_workflow",
+      "prompt": {
+        "role": "user",
+        "parts": [
+          {
+            "text": "Inspect Dockerfile and GitHub Actions workflow YAML files for repository 'kubernetes/kubernetes'. Check for security misconfigurations and best practices."
+          }
+        ]
+      }
+    }
+  ]
+}

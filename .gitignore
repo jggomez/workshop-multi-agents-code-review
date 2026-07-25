@@ -1,0 +1,93 @@
+# ==============================================================================
+# PR Code Auditor AI - High Security .gitignore
+# Prevents accidental commits of secrets, API keys, credentials, and build artifacts
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. Environment & Sensitive Credentials (STRICT)
+# ------------------------------------------------------------------------------
+.env
+.env.*
+*.env
+!.env.example
+*.pem
+*.key
+*.p12
+*.cer
+*.crt
+*.pub
+*credentials*.json
+*keyfile*.json
+google-services.json
+GoogleService-Info.plist
+gcp-key.json
+service-account*.json
+
+# ------------------------------------------------------------------------------
+# 2. Python & Package Management (uv, venv, pytest)
+# ------------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+ENV/
+.uv/
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# ------------------------------------------------------------------------------
+# 3. Node.js & Web Assets
+# ------------------------------------------------------------------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ------------------------------------------------------------------------------
+# 4. Logs, Temporary Files & AI Agent Sessions
+# ------------------------------------------------------------------------------
+logs/
+*.log
+tmp/
+temp/
+scratch/
+.agents/
+.gemini/
+brain/
+
+# ------------------------------------------------------------------------------
+# 5. OS & IDE Configurations
+# ------------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDEs & Editors
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace

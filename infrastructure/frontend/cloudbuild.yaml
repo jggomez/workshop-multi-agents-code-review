@@ -1,0 +1,49 @@
+# ==============================================================================
+# Cloud Build YAML for PR Code Auditor Web Frontend
+# Builds image, pushes to Artifact Registry, and deploys to Cloud Run
+# ==============================================================================
+
+substitutions:
+  _LOCATION: 'us-central1'
+  _REPOSITORY: 'pr-auditor-repo'
+  _SERVICE_NAME: 'pr-auditor-frontend'
+  _AGENT_SERVER_URL: 'http://localhost:8000'
+  _TAG: 'latest'
+
+steps:
+  # 1. Build Container Image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE_NAME}:${_TAG}'
+      - '-f'
+      - 'infrastructure/frontend/Dockerfile'
+      - '.'
+
+  # 2. Push Image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE_NAME}:${_TAG}'
+
+  # 3. Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - '${_SERVICE_NAME}'
+      - '--image=${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE_NAME}:${_TAG}'
+      - '--region=${_LOCATION}'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--memory=256Mi'
+      - '--cpu=1'
+      - '--set-env-vars=AGENT_SERVER_URL=${_AGENT_SERVER_URL}'
+
+images:
+  - '${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE_NAME}:${_TAG}'
+
+options:
+  logging: CLOUD_LOGGING_ONLY

@@ -1,0 +1,55 @@
+# ==============================================================================
+# Cloud Build YAML for ADK Agent FastAPI Backend (Vertex AI Enabled)
+# Builds image, pushes to Artifact Registry, and deploys to Cloud Run with Vertex AI ADC
+# ==============================================================================
+
+substitutions:
+  _LOCATION: 'us-central1'
+  _REPOSITORY: 'pr-auditor-repo'
+  _SERVICE_NAME: 'pr-auditor-agent'
+  _SERVICE_ACCOUNT: ''
+  _MCP_SERVER_URL: 'http://localhost:8085/mcp'
+  _USE_VERTEXAI: 'true'
+  _GEMINI_MODEL: 'gemini-2.5-flash-lite'
+  _GEMINI_CRITIC_MODEL: 'gemini-2.5-flash'
+  _TAG: 'latest'
+
+steps:
+  # 1. Build Container Image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE_NAME}:${_TAG}'
+      - '-f'
+      - 'infrastructure/agent-server/Dockerfile'
+      - '.'
+
+  # 2. Push Image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE_NAME}:${_TAG}'
+
+  # 3. Deploy to Cloud Run with Vertex AI Environment & Service Account ADC
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - '${_SERVICE_NAME}'
+      - '--image=${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE_NAME}:${_TAG}'
+      - '--region=${_LOCATION}'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--memory=2Gi'
+      - '--cpu=1'
+      - '--service-account=${_SERVICE_ACCOUNT}'
+      - '--set-env-vars=MCP_SERVER_URL=${_MCP_SERVER_URL},GOOGLE_GENAI_USE_VERTEXAI=${_USE_VERTEXAI},GOOGLE_CLOUD_PROJECT=${PROJECT_ID},GOOGLE_CLOUD_LOCATION=${_LOCATION},GEMINI_MODEL=${_GEMINI_MODEL},GEMINI_CRITIC_MODEL=${_GEMINI_CRITIC_MODEL}'
+      - '--set-secrets=GEMINI_API_KEY=gemini-api-key:latest,GITHUB_TOKEN=github-token:latest,GITHUB_PERSONAL_ACCESS_TOKEN=github-token:latest'
+
+images:
+  - '${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE_NAME}:${_TAG}'
+
+options:
+  logging: CLOUD_LOGGING_ONLY

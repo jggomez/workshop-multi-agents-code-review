@@ -1,0 +1,50 @@
+# ==============================================================================
+# Cloud Build YAML for FastMCP GitHub Server
+# Builds image, pushes to Artifact Registry, and deploys to Cloud Run
+# ==============================================================================
+
+substitutions:
+  _LOCATION: 'us-central1'
+  _REPOSITORY: 'pr-auditor-repo'
+  _SERVICE_NAME: 'mcp-server-github'
+  _SERVICE_ACCOUNT: ''
+  _TAG: 'latest'
+
+steps:
+  # 1. Build Container Image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - '${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE_NAME}:${_TAG}'
+      - '-f'
+      - 'infrastructure/mcp-server/Dockerfile'
+      - '.'
+
+  # 2. Push Image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE_NAME}:${_TAG}'
+
+  # 3. Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - '${_SERVICE_NAME}'
+      - '--image=${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE_NAME}:${_TAG}'
+      - '--region=${_LOCATION}'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--memory=512Mi'
+      - '--cpu=1'
+      - '--service-account=${_SERVICE_ACCOUNT}'
+      - '--set-secrets=GITHUB_TOKEN=github-token:latest,GITHUB_PERSONAL_ACCESS_TOKEN=github-token:latest'
+
+images:
+  - '${_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE_NAME}:${_TAG}'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
