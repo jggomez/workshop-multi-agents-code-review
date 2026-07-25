@@ -16,6 +16,24 @@ The PR Code Auditor AI platform automates code reviews for public and private Gi
 * **Inter-Agent Protocol Support**: Exposes A2A Agent Cards at `/.well-known/agent.json` for seamless integration into larger agent networks.
 * **Enterprise Cloud Deployment**: Fully containerized and deployable to Google Cloud Run using Vertex AI for model inference.
 
+### User Interface & Application Screenshots
+
+#### 1. Hero Banner & Multi-Agent Pipeline Visualization
+![Dashboard Hero & Pipeline Visualizer](./screenshoots/Screenshot%202026-07-25%20at%2012.36.57%E2%80%AFp.m..png)
+* **Description**: Main application dashboard featuring the repository input control, quick-fill preset buttons (`octocat/Hello-World`, `pallets/flask`, `fastapi/fastapi`), mode toggle, and real-time status cards tracking the execution progress of `pr_investigator_agent`, `critical_reviewer_agent`, and `pr_report_agent`.
+
+#### 2. Streaming Event Console (ADK SSE Feed) & PDF Export Action
+![Streaming SSE Console & PDF Export](./screenshoots/Screenshot%202026-07-25%20at%2012.37.06%E2%80%AFp.m..png)
+* **Description**: Terminal-style live console streaming Server-Sent Events (SSE) directly from the FastAPI backend. Displays agent execution steps, tool call logs, critic approval events, overall quality score gauge, and the PDF export action bar.
+
+#### 3. Technical Audit Report & Categorized Findings
+![Technical Audit Report & Issues View](./screenshoots/Screenshot%202026-07-25%20at%2012.37.15%E2%80%AFp.m..png)
+* **Description**: Comprehensive technical report view presenting Executive Summary, Security & OWASP Assessment, SOLID Principles Compliance, severity filter pills (All, Critical, High, Medium, Low), and individual vulnerability cards complete with file locations and recommended remediations.
+
+#### 4. A2UI Interactive Conversational Chat Interface
+![A2UI Agent Conversational Chat](./screenshoots/Screenshot%202026-07-25%20at%2012.36.47%E2%80%AFp.m..png)
+* **Description**: Interactive chat interface leveraging the **A2UI Protocol v0.9** via `a2ui-agent-sdk`. Demonstrates dynamic UI surface components streamed directly into conversational chat cards, providing score badges, summaries, and interactive controls.
+
 ---
 
 ## 2. System Architecture & Component Interaction
