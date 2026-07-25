@@ -69,7 +69,31 @@ sequenceDiagram
 
 ---
 
-## 3. GCP Setup & Gemini Authentication Guide
+## 3. Protocols, Architectural Patterns & Tactics
+
+### Protocols Implemented
+1. **Model Context Protocol (MCP)**: standardizes tool discovery, schema definition, and remote tool execution over Streamable HTTP between ADK agents and external services.
+2. **A2UI Protocol (v0.9)**: declarative Agent-to-User Interface protocol enabling backend agents to stream structured JSON surface components directly to the client UI.
+3. **A2A Protocol (Agent-to-Agent)**: inter-agent communication specification providing machine-readable Agent Cards (`/.well-known/agent.json`) and standardized task endpoints (`/a2a/v1/tasks`).
+4. **Server-Sent Events (SSE)**: unidirectional streaming transport allowing real-time event log delivery from FastAPI to the web browser.
+
+### Architectural Patterns
+* **LoopAgent Refinement Pattern**: implements an iterative review cycle where `critical_reviewer_agent` evaluates findings from `pr_investigator_agent` and provides feedback until satisfied.
+* **SequentialAgent Pipeline**: orchestrates distinct pipeline stages sequentially (Investigation -> Loop Review -> Structured Report Generation).
+* **Clean Architecture**: enforces strict separation between Domain entities, Use Cases, Infrastructure repositories, and Presentation controllers in frontend and backend.
+* **Model Context Protocol Toolset (`McpToolset`)**: decouples tool implementation from the LLM execution environment.
+
+### Architectural Tactics & Optimizations
+* **Distributed Agents Microservices**: Each system component (FastMCP server, ADK agent server, frontend) is packaged as an independent container and deployed to separate Cloud Run services.
+* **Model Allocation Tactics (Latency vs. Accuracy Optimization)**:
+  * `gemini-2.5-flash-lite`: Assigned to high-volume, low-latency code retrieval and initial file scanning (`pr_investigator_agent`).
+  * `gemini-2.5-flash`: Assigned to high-accuracy reasoning, critic evaluation, and OWASP vulnerability analysis (`critical_reviewer_agent`).
+* **Structured Output Schema Enforcement**: Uses Pydantic data contracts (`PRCodeAuditReport`) to eliminate unstructured hallucinated text.
+* **Resilient Client Failover**: Client frontend automatically falls back to an interactive Demo Mode simulation if the backend connection is unreachable.
+
+---
+
+## 4. GCP Setup & Gemini Authentication Guide
 
 This application consumes Google Gemini models (`gemini-2.5-flash-lite` and `gemini-2.5-flash`) hosted on **Google Cloud Vertex AI**. An active Google Cloud Platform (GCP) project with Vertex AI APIs enabled is required.
 
@@ -111,7 +135,7 @@ CRITIC_MODEL_NAME=gemini-2.5-flash
 
 ---
 
-## 4. Agent Skills & MCP Harness Setup
+## 5. Agent Skills & MCP Harness Setup
 
 To maximize development efficiency, token savings, and architectural compliance during workshops, developers should prepare their environment using the **Expert AI Developer Skills** framework (`skills.sh`).
 
@@ -164,7 +188,7 @@ Developers and AI subagents must strictly adhere to the project rules located in
 
 ---
 
-## 5. Local Development & Testing Guide
+## 6. Local Development & Testing Guide
 
 ### Running Services Locally
 
@@ -212,7 +236,7 @@ uv run pytest
 
 ---
 
-## 6. Workshop Step-by-Step Guide: Building from Scratch with Antigravity CLI
+## 7. Workshop Step-by-Step Guide: Building from Scratch with Antigravity CLI
 
 This section provides a step-by-step tutorial for building this platform from scratch. Workshop attendees use **Antigravity CLI (`agy`)**, an agentic coding assistant, to generate each component sequentially using targeted prompts.
 
@@ -416,7 +440,7 @@ Create an infrastructure directory where you put the necessary scripts to deploy
 
 ---
 
-## 7. Verification & Production Audit Checklist
+## 8. Verification & Production Audit Checklist
 
 Before declaring a deployment complete, verify all quality gates:
 
@@ -427,3 +451,13 @@ Before declaring a deployment complete, verify all quality gates:
 - [x] Frontend application correctly switches between SSE streaming backend mode and offline Demo mode.
 - [x] All 3 Cloud Run services (`mcp-server-github`, `pr-auditor-agent`, `pr-auditor-frontend`) report `STATUS: SUCCESS` on GCP Cloud Run.
 - [x] Vertex AI integration verified with ADC (`roles/aiplatform.user`).
+
+---
+
+## 9. References & Further Reading
+
+* **AG-UI Protocol Specification**: [https://github.com/ag-ui-protocol](https://github.com/ag-ui-protocol)
+* **Expert AI Developer Skills Repository**: [https://github.com/jggomez/expert-ai-developer-skills](https://github.com/jggomez/expert-ai-developer-skills)
+* **Google Agent Development Kit (ADK)**: [https://adk.dev/](https://adk.dev/)
+* **A2A (Agent-to-Agent) Protocol Overview**: [https://adk.dev/a2a/intro/](https://adk.dev/a2a/intro/)
+* **DevHack Developer Community**: [https://devhack.co/](https://devhack.co/)
