@@ -597,4 +597,5 @@ Before declaring a deployment complete, verify all quality gates:
 * **Expert AI Developer Skills Repository**: [https://github.com/jggomez/expert-ai-developer-skills](https://github.com/jggomez/expert-ai-developer-skills)
 * **Google Agent Development Kit (ADK)**: [https://adk.dev/](https://adk.dev/)
 * **A2A (Agent-to-Agent) Protocol Overview**: [https://adk.dev/a2a/intro/](https://adk.dev/a2a/intro/)
+* **Google Cloud ADK & A2UI Codelab**: [https://codelabs.developers.google.com/next26/adk-a2ui#0](https://codelabs.developers.google.com/next26/adk-a2ui#0)
 * **DevHack Developer Community**: [https://devhack.co/](https://devhack.co/)
