@@ -18,54 +18,193 @@ The PR Code Auditor AI platform automates code reviews for public and private Gi
 
 ---
 
-## 2. Architecture & Component Interaction
+## 2. System Architecture & Component Interaction
+
+The platform follows a microservices-based, multi-tiered agentic architecture. The diagram below illustrates the system container topology, network boundaries, and protocol interfaces:
+
+### System Container Topology Diagram
+
+```mermaid
+graph TB
+    subgraph ClientTier["Client Tier (User Browser)"]
+        UI["Single Page Application\n(HTML5 / Tailwind CSS / Vanilla JS)"]
+        A2UIRenderer["A2UI Surface Engine\n(A2uiParser + A2uiRenderer)"]
+        SSEListener["SSE Stream Listener\n(EventSource)"]
+        PDFExp["PDF Exporter\n(html2pdf.js)"]
+        UI --> A2UIRenderer
+        UI --> SSEListener
+        UI --> PDFExp
+    end
+
+    subgraph FrontendContainer["Frontend Microservice (Cloud Run / Nginx)"]
+        Nginx["Nginx Web Server\n(Port 8080 / 3000)"]
+        ConfigJS["Runtime Config Injector\n(docker-entrypoint.sh)"]
+        Nginx --> UI
+        ConfigJS --> Nginx
+    end
+
+    subgraph AgentBackendContainer["ADK Agent Server Microservice (Cloud Run / FastAPI)"]
+        FastAPI["FastAPI App\n(Port 8000)"]
+        
+        subgraph ADKPipeline["Google ADK Multi-Agent Engine"]
+            SeqPipeline["SequentialAgent Pipeline\n(pr_auditor_pipeline)"]
+            
+            InvestigatorAgent["pr_investigator_agent\n(gemini-2.5-flash-lite)"]
+            
+            subgraph CriticLoop["Refinement LoopAgent"]
+                CriticAgent["critical_reviewer_agent\n(gemini-2.5-flash)"]
+                ApproveTool["Escalation Tool\n(approve_audit)"]
+                CriticAgent --> ApproveTool
+            end
+
+            ReportAgent["pr_report_agent\n(Structured Output)"]
+
+            SeqPipeline --> InvestigatorAgent
+            SeqPipeline --> CriticLoop
+            SeqPipeline --> ReportAgent
+        end
+
+        A2AService["A2A Protocol Engine\n(Agent Cards & Task API)"]
+        A2UIService["A2UI Surface Generator\n(a2ui-agent-sdk)"]
+        MCPClient["ADK McpToolset\n(Streamable HTTP Client)"]
+
+        FastAPI --> ADKPipeline
+        FastAPI --> A2AService
+        FastAPI --> A2UIService
+        InvestigatorAgent --> MCPClient
+        CriticAgent --> MCPClient
+    end
+
+    subgraph FastMCPContainer["MCP Server Microservice (Cloud Run / FastMCP)"]
+        FastMCPServer["FastMCP Server\n(Port 8085 / HTTP Streamable)"]
+        GHClient["PyGithub Client\n(GitHub Client Wrapper)"]
+        
+        ToolPRList["Tool: list_open_pull_requests"]
+        ToolFileContent["Tool: get_file_content"]
+
+        FastMCPServer --> ToolPRList
+        FastMCPServer --> ToolFileContent
+        ToolPRList --> GHClient
+        ToolFileContent --> GHClient
+    end
+
+    subgraph ManagedGCP["Managed GCP Services & Infrastructure"]
+        VertexAI["Google Vertex AI\n(Gemini 2.5 Models)"]
+        SecretManager["GCP Secret Manager\n(gemini-api-key, github-token)"]
+        CloudLogging["GCP Cloud Logging"]
+    end
+
+    subgraph ExternalServices["External APIs"]
+        GitHubAPI["GitHub REST API\n(api.github.com)"]
+    end
+
+    %% Network Connections
+    SSEListener <-->|SSE Streaming HTTP| FastAPI
+    MCPClient <-->|POST /mcp JSON-RPC| FastMCPServer
+    GHClient <-->|HTTPS REST| GitHubAPI
+    InvestigatorAgent <-->|gRPC / ADC| VertexAI
+    CriticAgent <-->|gRPC / ADC| VertexAI
+    FastAPI <-->|IAM ADC| SecretManager
+    FastAPI --> CloudLogging
+```
+
+---
+
+### Sequence Diagram & Protocol Data Flow
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor User as Engineer / Auditor
-    participant FE as Frontend (Vanilla JS + A2UI)
+    participant FE as Web Frontend (Vanilla JS)
     participant ADK as ADK Agent Backend (FastAPI :8000)
     participant MCP as FastMCP GitHub Server (:8085)
-    participant GH as GitHub API
+    participant GH as GitHub REST API
     participant VAI as Vertex AI (Gemini 2.5)
 
-    User->>FE: Enter repository (e.g. octocat/Hello-World)
-    FE->>ADK: POST /run_sse (repo_path)
-    
+    User->>FE: 1. Input repo URL (e.g. octocat/Hello-World)
+    FE->>ADK: 2. POST /run_sse (repo_path: octocat/Hello-World)
+    ADK-->>FE: 3. HTTP 200 OK (text/event-stream established)
+
     rect rgb(30, 41, 59)
-        note over ADK, MCP: ADK Multi-Agent Loop Execution
+        note over ADK, VAI: Stage 1: Initial Investigation (pr_investigator_agent)
+        ADK->>FE: SSE event: [SYSTEM] Starting audit for octocat/Hello-World...
         ADK->>VAI: Prompt pr_investigator_agent (gemini-2.5-flash-lite)
-        VAI->>ADK: Tool call: list_open_pull_requests(owner, repo)
+        VAI-->>ADK: Tool call: list_open_pull_requests(owner='octocat', repo='Hello-World')
         ADK->>MCP: HTTP POST /mcp (list_open_pull_requests)
-        MCP->>GH: GET /repos/{owner}/{repo}/pulls
-        GH-->>MCP: Return Open Pull Requests JSON
-        MCP-->>ADK: Tool Result (PR List)
-        
-        ADK->>VAI: Tool call: get_file_content(owner, repo, path)
+        MCP->>GH: GET /repos/octocat/Hello-World/pulls?state=open
+        GH-->>MCP: 200 OK (JSON PR list)
+        MCP-->>ADK: Tool Response (PR #10, PR #12)
+        ADK->>FE: SSE event: [pr_investigator_agent] Found 2 open PRs...
+
+        ADK->>VAI: Prompt continuation with PR list
+        VAI-->>ADK: Tool call: get_file_content(owner='octocat', repo='Hello-World', path='src/auth.py')
         ADK->>MCP: HTTP POST /mcp (get_file_content)
-        MCP->>GH: GET /repos/{owner}/{repo}/contents/{path}
-        GH-->>MCP: Return File Source Code
-        MCP-->>ADK: Tool Result (Source Code)
-        
-        ADK->>VAI: Prompt critical_reviewer_agent (gemini-2.5-flash)
-        VAI-->>ADK: Review Feedback / Call approve_audit()
-        ADK->>VAI: Prompt pr_report_agent
-        VAI-->>ADK: Structured Pydantic PRCodeAuditReport JSON
+        MCP->>GH: GET /repos/octocat/Hello-World/contents/src/auth.py
+        GH-->>MCP: 200 OK (File content base64)
+        MCP-->>ADK: Tool Response (Source code)
+        ADK->>FE: SSE event: [pr_investigator_agent] Analyzed src/auth.py (Hardcoded secret detected)
     end
 
-    ADK-->>FE: Stream SSE Events & A2UI Surface Payload
-    FE->>User: Render Live Pipeline, Interactive A2UI Chat & PDF Export
+    rect rgb(49, 46, 129)
+        note over ADK, VAI: Stage 2: Refinement Loop (critical_reviewer_agent)
+        ADK->>VAI: Prompt critical_reviewer_agent (gemini-2.5-flash) inside LoopAgent
+        VAI-->>ADK: Feedback: Dockerfile root user execution was missed. Requesting re-inspection.
+        ADK->>FE: SSE event: [critical_reviewer_agent] Evaluating omissions...
+        ADK->>VAI: Re-evaluate with Dockerfile inspection
+        VAI-->>ADK: Tool call: approve_audit()
+        ADK->>FE: SSE event: [critical_reviewer_agent] Audit approved without omissions.
+    end
+
+    rect rgb(6, 78, 59)
+        note over ADK, FE: Stage 3: Report Synthesis & A2UI Surface Emission
+        ADK->>VAI: Prompt pr_report_agent for structured Pydantic report
+        VAI-->>ADK: PRCodeAuditReport JSON (Score: 75, Verdict: REVIEW REQUIRED, Issues: [...])
+        ADK->>ADK: Generate A2UI Surface JSON payload using a2ui-agent-sdk
+        ADK-->>FE: SSE event: [pr_report_agent] Complete report + A2UI Surface JSON
+    end
+
+    FE->>FE: Parse & render report view, A2UI interactive widgets
+    FE->>User: Display audit results & activate PDF export button
 ```
+
+---
+
+### Subsystem Architectural Breakdown
+
+#### 1. Frontend Subsystem (`pr-auditor-frontend`)
+* **Layering**: Organized under Clean Architecture into `domain/` (entities and repository contracts), `usecases/` (`StartAuditUseCase`, `FilterIssuesUseCase`, `ExportPdfUseCase`), `infrastructure/` (`SseAuditRepository`, `DemoAuditRepository`, `A2uiParser`, `A2uiRenderer`, `Html2PdfExporter`), and `presentation/` (`AuditView`, `ChatView`, `AuditController`, `ChatController`).
+* **Dynamic Configuration**: Loads `window.ENV_AGENT_SERVER_URL` injected at container boot by `docker-entrypoint.d/40-runtime-config.sh`.
+* **Failover Resilience**: Automatically detects backend offline states and falls back to `DemoAuditRepository` simulation.
+
+#### 2. ADK Agent Backend Subsystem (`pr-auditor-agent`)
+* **Agent Engine**: Built using Google ADK 2.5.0. Orchestrates three specialized agents:
+  * `pr_investigator_agent`: Uses `gemini-2.5-flash-lite` for high-speed repository scanning via `McpToolset`.
+  * `critical_reviewer_agent`: Uses `gemini-2.5-flash` wrapped inside a `LoopAgent(max_iterations=3)` to critically verify findings.
+  * `pr_report_agent`: Synthesizes final output into Pydantic schema `PRCodeAuditReport`.
+* **API Endpoints**:
+  * `POST /run_sse`: Server-Sent Events streaming audit pipeline.
+  * `GET /.well-known/agent.json`: Root A2A Agent Card.
+  * `GET /agents/investigator/.well-known/agent.json`: Investigator Sub-agent Card.
+  * `GET /agents/critic/.well-known/agent.json`: Critic Sub-agent Card.
+  * `POST /a2a/v1/tasks`: A2A task execution endpoint.
+
+#### 3. MCP Server Subsystem (`mcp-server-github`)
+* **FastMCP Framework**: Exposes HTTP Streamable transport on `/mcp`.
+* **Tool Registry**:
+  * `list_open_pull_requests(owner: str, repo: str)`: Returns open PR metadata.
+  * `get_file_content(owner: str, repo: str, path: str)`: Retrieves source code, Dockerfiles, and configuration files.
+
+---
 
 ### Component Reference Table
 
-| Component | Port | Technology Stack | Primary Purpose |
-| :--- | :--- | :--- | :--- |
-| **`mcp-server-github`** | 8085 | FastMCP, Python 3.12, `uv`, HTTP Streamable | Exposes GitHub tools (`list_open_pull_requests`, `get_file_content`) via MCP protocol. |
-| **`pr-auditor-agent`** | 8000 | Google ADK 2.5.0, FastAPI, Pydantic, Vertex AI | Orchestrates multi-agent pipeline (`LoopAgent`, `SequentialAgent`) and serves SSE/A2A endpoints. |
-| **`pr-auditor-frontend`** | 3000 | HTML5, Tailwind CSS, Vanilla JS, `html2pdf.js` | Provides pipeline dashboard, A2UI chat interface, and PDF export capabilities. |
-| **`infrastructure`** | Cloud Run | Docker, Cloud Build, GCP Secret Manager | Manages containerization, IAM permissions, GCP API setup, and Cloud Run deployments. |
+| Component | Port | Technology Stack | Interfaces & Protocols | Security Bounds |
+| :--- | :--- | :--- | :--- | :--- |
+| **`mcp-server-github`** | 8085 | FastMCP, Python 3.12, `uv` | HTTP Streamable (`/mcp`), GitHub REST API | Read-only GitHub API scope; token mounted via Secret Manager. |
+| **`pr-auditor-agent`** | 8000 | Google ADK 2.5.0, FastAPI, Pydantic | SSE (`/run_sse`), A2A (`/.well-known/agent.json`), A2UI Protocol v0.9 | GCP ADC (`roles/aiplatform.user`), Secret Manager accessor. |
+| **`pr-auditor-frontend`** | 3000 | HTML5, Tailwind CSS, Vanilla JS | HTTP Static, SSE Listener, A2UI Surface Engine | Unauthenticated public static client; CORS configured. |
+| **`infrastructure`** | Cloud Run | Docker, Cloud Build, GCP IAM | gcloud CLI, Cloud Build YAML, Secret Manager | Least-privilege IAM service account `pr-auditor-sa`. |
 
 ---
 
