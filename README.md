@@ -309,10 +309,8 @@ The project includes specialized filesystem-based skills in `.agents/skills/`. W
 Antigravity CLI and ADK agents utilize Model Context Protocol (MCP) servers to execute system operations deterministically:
 
 * **`adk-docs-mcp`**: Search and retrieve official Google ADK documentation and API references.
-* **`bigquery`**: Execute read-only SQL queries and explore schema definitions.
 * **`chrome-devtools`**: Run browser interactions, client-side audits, and DOM inspection.
 * **`cloudrun`**: Inspect deployed Cloud Run services, configuration states, and container execution logs.
-* **`firebase-mcp-server`**: Execute Firestore database operations, security rules validation, and remote config updates.
 
 ### Workspace Enforcement Rules (`.agents/rules/`)
 
