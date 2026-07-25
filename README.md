@@ -318,8 +318,10 @@ The project includes specialized filesystem-based skills in `.agents/skills/`. W
 
 ### Available Model Context Protocol (MCP) Servers
 
-Antigravity CLI and ADK agents utilize Model Context Protocol (MCP) servers to execute system operations deterministically:
+Antigravity CLI and ADK agents utilize Model Context Protocol (MCP) servers registered in `mcp_config.json` and `.mcp.json` to execute system operations deterministically:
 
+* **`mcp-server-github`** (Local): FastMCP Streamable HTTP server running on `http://localhost:8085/mcp`.
+* **`mcp-server-github-production`** (Remote): FastMCP Streamable HTTP endpoint hosted on Cloud Run (`https://mcp-server-github-ozarbv64lq-uc.a.run.app/mcp`).
 * **`adk-docs-mcp`**: Search and retrieve official Google ADK documentation and API references.
 * **`chrome-devtools`**: Run browser interactions, client-side audits, and DOM inspection.
 * **`cloudrun`**: Inspect deployed Cloud Run services, configuration states, and container execution logs.

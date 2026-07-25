@@ -1,0 +1,26 @@
+{
+  "mcpServers": {
+    "mcp-server-github": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "./mcp-server-github",
+        "run",
+        "mcp-server-github",
+        "--transport",
+        "streamable-http",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8085"
+      ],
+      "env": {
+        "PORT": "8085",
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
+      }
+    },
+    "mcp-server-github-production": {
+      "url": "https://mcp-server-github-ozarbv64lq-uc.a.run.app/mcp"
+    }
+  }
+}
