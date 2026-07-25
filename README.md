@@ -115,57 +115,51 @@ graph TB
 ```mermaid
 sequenceDiagram
     autonumber
-    actor User as Engineer / Auditor
-    participant FE as Web Frontend (Vanilla JS)
-    participant ADK as ADK Agent Backend (FastAPI :8000)
-    participant MCP as FastMCP GitHub Server (:8085)
+    actor User as Auditor / User
+    participant FE as Web Frontend
+    participant ADK as ADK Agent Server
+    participant MCP as FastMCP GitHub Server
     participant GH as GitHub REST API
     participant VAI as Vertex AI (Gemini 2.5)
 
-    User->>FE: 1. Input repo URL (e.g. octocat/Hello-World)
-    FE->>ADK: 2. POST /run_sse (repo_path: octocat/Hello-World)
-    ADK-->>FE: 3. HTTP 200 OK (text/event-stream established)
+    User->>FE: Input repository URL
+    FE->>ADK: POST /run_sse (Start Audit)
+    ADK-->>FE: HTTP 200 OK (SSE Stream Connected)
 
-    rect rgb(30, 41, 59)
-        note over ADK, VAI: Stage 1: Initial Investigation (pr_investigator_agent)
-        ADK->>FE: SSE event: [SYSTEM] Starting audit for octocat/Hello-World...
-        ADK->>VAI: Prompt pr_investigator_agent (gemini-2.5-flash-lite)
-        VAI-->>ADK: Tool call: list_open_pull_requests(owner='octocat', repo='Hello-World')
-        ADK->>MCP: HTTP POST /mcp (list_open_pull_requests)
-        MCP->>GH: GET /repos/octocat/Hello-World/pulls?state=open
-        GH-->>MCP: 200 OK (JSON PR list)
-        MCP-->>ADK: Tool Response (PR #10, PR #12)
-        ADK->>FE: SSE event: [pr_investigator_agent] Found 2 open PRs...
+    note over ADK, VAI: Stage 1: Initial Investigation (pr_investigator_agent)
+    ADK->>FE: SSE event: Starting audit pipeline
+    ADK->>VAI: Prompt investigator agent (gemini-2.5-flash-lite)
+    VAI-->>ADK: Tool call: list_open_pull_requests
+    ADK->>MCP: HTTP POST /mcp (list_open_pull_requests)
+    MCP->>GH: GET /repos/{owner}/{repo}/pulls
+    GH-->>MCP: 200 OK (Open Pull Requests list)
+    MCP-->>ADK: Tool Result (PR list)
+    ADK->>FE: SSE event: PR list retrieved
 
-        ADK->>VAI: Prompt continuation with PR list
-        VAI-->>ADK: Tool call: get_file_content(owner='octocat', repo='Hello-World', path='src/auth.py')
-        ADK->>MCP: HTTP POST /mcp (get_file_content)
-        MCP->>GH: GET /repos/octocat/Hello-World/contents/src/auth.py
-        GH-->>MCP: 200 OK (File content base64)
-        MCP-->>ADK: Tool Response (Source code)
-        ADK->>FE: SSE event: [pr_investigator_agent] Analyzed src/auth.py (Hardcoded secret detected)
-    end
+    ADK->>VAI: Prompt with PR list context
+    VAI-->>ADK: Tool call: get_file_content
+    ADK->>MCP: HTTP POST /mcp (get_file_content)
+    MCP->>GH: GET /repos/{owner}/{repo}/contents/{path}
+    GH-->>MCP: 200 OK (File content)
+    MCP-->>ADK: Tool Result (Source code)
+    ADK->>FE: SSE event: Source files analyzed
 
-    rect rgb(49, 46, 129)
-        note over ADK, VAI: Stage 2: Refinement Loop (critical_reviewer_agent)
-        ADK->>VAI: Prompt critical_reviewer_agent (gemini-2.5-flash) inside LoopAgent
-        VAI-->>ADK: Feedback: Dockerfile root user execution was missed. Requesting re-inspection.
-        ADK->>FE: SSE event: [critical_reviewer_agent] Evaluating omissions...
-        ADK->>VAI: Re-evaluate with Dockerfile inspection
-        VAI-->>ADK: Tool call: approve_audit()
-        ADK->>FE: SSE event: [critical_reviewer_agent] Audit approved without omissions.
-    end
+    note over ADK, VAI: Stage 2: Refinement Loop (critical_reviewer_agent)
+    ADK->>VAI: Prompt critical reviewer (gemini-2.5-flash)
+    VAI-->>ADK: Feedback: Check Dockerfile user permissions
+    ADK->>FE: SSE event: Evaluating omissions
+    ADK->>VAI: Re-evaluate with Dockerfile inspection
+    VAI-->>ADK: Tool call: approve_audit
+    ADK->>FE: SSE event: Audit approved without omissions
 
-    rect rgb(6, 78, 59)
-        note over ADK, FE: Stage 3: Report Synthesis & A2UI Surface Emission
-        ADK->>VAI: Prompt pr_report_agent for structured Pydantic report
-        VAI-->>ADK: PRCodeAuditReport JSON (Score: 75, Verdict: REVIEW REQUIRED, Issues: [...])
-        ADK->>ADK: Generate A2UI Surface JSON payload using a2ui-agent-sdk
-        ADK-->>FE: SSE event: [pr_report_agent] Complete report + A2UI Surface JSON
-    end
+    note over ADK, FE: Stage 3: Structured Report & A2UI Surface Emission
+    ADK->>VAI: Prompt report agent for structured output
+    VAI-->>ADK: Structured PRCodeAuditReport JSON
+    ADK->>ADK: Generate A2UI Surface JSON payload
+    ADK-->>FE: SSE event: Audit Report and A2UI Surface Payload
 
-    FE->>FE: Parse & render report view, A2UI interactive widgets
-    FE->>User: Display audit results & activate PDF export button
+    FE->>FE: Parse A2UI surface and render interactive report
+    FE->>User: Display audit results and enable PDF export
 ```
 
 ---
