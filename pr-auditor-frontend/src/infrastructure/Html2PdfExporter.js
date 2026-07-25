@@ -1,6 +1,6 @@
 /**
  * Html2PdfExporter (Infrastructure Layer)
- * Implements IPdfExporter using html2pdf.js library
+ * Implements IPdfExporter using html2pdf.js with print-optimized A4 layout & page-break safeguards
  */
 import { IPdfExporter } from '../domain/repositories/IPdfExporter.js';
 
@@ -11,86 +11,184 @@ export class Html2PdfExporter extends IPdfExporter {
     }
 
     const repoNameSafe = (auditReport.repository || 'repo').replace(/[^a-zA-Z0-9_-]/g, '_');
-    const score = auditReport.overallQualityScore || 75;
-    const scoreColor = score >= 80 ? '#10b981' : score >= 60 ? '#f59e0b' : '#f43f5e';
+    const score = typeof auditReport.overallQualityScore === 'number' ? auditReport.overallQualityScore : 75;
+    
+    let scoreColor = '#10b981'; // Emerald
+    let scoreBg = '#ecfdf5';
+    let scoreBorder = '#a7f3d0';
+    if (score < 60) {
+      scoreColor = '#e11d48'; // Rose
+      scoreBg = '#fff1f2';
+      scoreBorder = '#fecdd3';
+    } else if (score < 80) {
+      scoreColor = '#d97706'; // Amber
+      scoreBg = '#fffbeb';
+      scoreBorder = '#fde68a';
+    }
+
     const verdict = auditReport.getVerdict();
+    const formattedDate = new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
 
-    // Create clean printable element
-    const printWrapper = document.createElement('div');
-    printWrapper.style.padding = '24px';
-    printWrapper.style.backgroundColor = '#0b0f19';
-    printWrapper.style.color = '#ffffff';
-    printWrapper.style.fontFamily = 'Inter, system-ui, sans-serif';
-
+    // Generate Issue Cards HTML with strict page-break protection
     let issuesHtml = '';
-    (auditReport.issues || []).forEach((issue) => {
+    (auditReport.issues || []).forEach((issue, index) => {
       const sev = (issue.severity || 'medium').toLowerCase();
-      const sevColor = sev === 'critical' ? '#f43f5e' : sev === 'high' ? '#f97316' : sev === 'medium' ? '#f59e0b' : '#38bdf8';
+      let sevBg = '#f1f5f9';
+      let sevColor = '#475569';
+      let sevBorder = '#cbd5e1';
+
+      if (sev === 'critical') {
+        sevBg = '#fff1f2';
+        sevColor = '#e11d48';
+        sevBorder = '#fecdd3';
+      } else if (sev === 'high') {
+        sevBg = '#fff7ed';
+        sevColor = '#ea580c';
+        sevBorder = '#ffedd5';
+      } else if (sev === 'medium') {
+        sevBg = '#fffbeb';
+        sevColor = '#d97706';
+        sevBorder = '#fde68a';
+      } else if (sev === 'low') {
+        sevBg = '#f0f9ff';
+        sevColor = '#0284c7';
+        sevBorder = '#e0f2fe';
+      }
 
       issuesHtml += `
-        <div style="margin-bottom: 12px; padding: 12px; background-color: #1e293b; border: 1px solid #334155; border-radius: 8px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-            <span style="background-color: ${sevColor}22; color: ${sevColor}; border: 1px solid ${sevColor}44; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: bold; text-transform: uppercase;">
-              ${sev}
-            </span>
-            <span style="font-family: monospace; font-size: 11px; color: #a5b4fc; background: #090d16; padding: 2px 6px; border-radius: 4px;">
-              ${this.escapeHtml(issue.filePath)}:${issue.lineNumber || 'N/A'}
-            </span>
-          </div>
-          <h4 style="margin: 0 0 4px 0; font-size: 13px; font-weight: bold; color: #ffffff;">${this.escapeHtml(issue.summary)}</h4>
-          <p style="margin: 0 0 6px 0; font-size: 11px; color: #cbd5e1; line-height: 1.4;">${this.escapeHtml(issue.description)}</p>
-          <div style="background-color: #0f172a; padding: 6px 10px; border-radius: 6px; font-size: 11px; border-left: 3px solid #10b981;">
-            <strong style="color: #10b981;">Recomendación:</strong> <span style="color: #e2e8f0;">${this.escapeHtml(issue.recommendation)}</span>
+        <div style="margin-bottom: 12px; padding: 12px 14px; background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; page-break-inside: avoid; break-inside: avoid;">
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 6px;">
+            <tr>
+              <td style="text-align: left; vertical-align: middle;">
+                <span style="display: inline-block; background-color: ${sevBg}; color: ${sevColor}; border: 1px solid ${sevBorder}; padding: 3px 9px; border-radius: 12px; font-size: 10px; font-weight: 700; text-transform: uppercase;">
+                  ${sev}
+                </span>
+                <span style="font-size: 10px; color: #64748b; font-weight: 600; margin-left: 8px; text-transform: uppercase;">
+                  ${this.escapeHtml(issue.issueType || 'Finding')}
+                </span>
+              </td>
+              <td style="text-align: right; vertical-align: middle;">
+                <span style="font-family: SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 10px; color: #4338ca; background-color: #e0e7ff; padding: 3px 8px; border-radius: 4px; font-weight: 600;">
+                  ${this.escapeHtml(issue.filePath)}:${issue.lineNumber || 'N/A'}
+                </span>
+              </td>
+            </tr>
+          </table>
+
+          <h4 style="margin: 4px 0 6px 0; font-size: 13px; font-weight: 700; color: #0f172a; line-height: 1.3;">
+            #${index + 1}. ${this.escapeHtml(issue.summary)}
+          </h4>
+
+          <p style="margin: 0 0 8px 0; font-size: 11px; color: #334155; line-height: 1.45;">
+            ${this.escapeHtml(issue.description)}
+          </p>
+
+          <div style="background-color: #f8fafc; padding: 8px 12px; border-radius: 6px; font-size: 11px; border-left: 3px solid #10b981; margin-top: 4px;">
+            <strong style="color: #059669; font-weight: 700;">Recommendation:</strong> 
+            <span style="color: #1e293b;">${this.escapeHtml(issue.recommendation)}</span>
           </div>
         </div>
       `;
     });
 
+    // Printable Document Container
+    const printWrapper = document.createElement('div');
+    printWrapper.style.width = '100%';
+    printWrapper.style.boxSizing = 'border-box';
+    printWrapper.style.padding = '28px 24px';
+    printWrapper.style.backgroundColor = '#ffffff';
+    printWrapper.style.color = '#0f172a';
+    printWrapper.style.fontFamily = 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+
     printWrapper.innerHTML = `
-      <div style="border-bottom: 2px solid #1e293b; padding-bottom: 12px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
-        <div>
-          <h1 style="margin: 0; font-size: 18px; font-weight: 800; color: #ffffff;">Code Audit Technical Report</h1>
-          <p style="margin: 4px 0 0 0; font-size: 11px; color: #94a3b8; font-family: monospace;">Repository: ${this.escapeHtml(auditReport.repository)} | PR #${auditReport.prNumber || 'N/A'}</p>
-        </div>
-        <div style="text-align: right;">
-          <div style="font-size: 24px; font-weight: 900; color: ${scoreColor};">${score} / 100</div>
-          <div style="font-size: 11px; font-weight: bold; color: ${scoreColor}; font-family: monospace;">${verdict.label}</div>
-        </div>
+      <!-- Header Bar -->
+      <div style="border-bottom: 2px solid #0f172a; padding-bottom: 14px; margin-bottom: 18px; page-break-inside: avoid;">
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td style="vertical-align: top;">
+              <span style="font-size: 10px; font-weight: 700; color: #4338ca; text-transform: uppercase; letter-spacing: 0.5px;">
+                PR Code Auditor AI • Technical Report
+              </span>
+              <h1 style="margin: 4px 0 0 0; font-size: 20px; font-weight: 800; color: #0f172a;">
+                Pull Request Audit Analysis
+              </h1>
+              <p style="margin: 4px 0 0 0; font-size: 11px; color: #64748b; font-family: monospace;">
+                Repository: <strong>${this.escapeHtml(auditReport.repository)}</strong> | PR #${auditReport.prNumber || 'N/A'} | ${formattedDate}
+              </p>
+            </td>
+            <td style="text-align: right; vertical-align: top; width: 140px;">
+              <div style="background-color: ${scoreBg}; border: 1px solid ${scoreBorder}; padding: 8px 12px; border-radius: 10px; text-align: center;">
+                <div style="font-size: 22px; font-weight: 900; color: ${scoreColor}; line-height: 1;">${score}<span style="font-size: 12px; font-weight: 600; color: #64748b;">/100</span></div>
+                <div style="font-size: 10px; font-weight: 800; color: ${scoreColor}; text-transform: uppercase; margin-top: 4px;">${this.escapeHtml(verdict.label)}</div>
+              </div>
+            </td>
+          </tr>
+        </table>
       </div>
 
-      <div style="margin-bottom: 14px; background: #1e293b; padding: 12px; border-radius: 8px; border: 1px solid #334155;">
-        <h3 style="margin: 0 0 4px 0; font-size: 12px; font-weight: bold; color: #818cf8; text-transform: uppercase;">Executive Summary</h3>
-        <p style="margin: 0; font-size: 11px; color: #e2e8f0; line-height: 1.5;">${this.escapeHtml(auditReport.auditSummary)}</p>
-      </div>
-
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
-        <div style="background: #1e293b; padding: 12px; border-radius: 8px; border: 1px solid #334155;">
-          <h3 style="margin: 0 0 4px 0; font-size: 12px; font-weight: bold; color: #f43f5e; text-transform: uppercase;">Security & OWASP Assessment</h3>
-          <p style="margin: 0; font-size: 11px; color: #e2e8f0; line-height: 1.4;">${this.escapeHtml(auditReport.securityAssessment)}</p>
-        </div>
-        <div style="background: #1e293b; padding: 12px; border-radius: 8px; border: 1px solid #334155;">
-          <h3 style="margin: 0 0 4px 0; font-size: 12px; font-weight: bold; color: #c084fc; text-transform: uppercase;">SOLID Principles Compliance</h3>
-          <p style="margin: 0; font-size: 11px; color: #e2e8f0; line-height: 1.4;">${this.escapeHtml(auditReport.solidComplianceNotes)}</p>
-        </div>
-      </div>
-
-      <div style="margin-top: 16px;">
-        <h3 style="margin: 0 0 10px 0; font-size: 14px; font-weight: bold; color: #ffffff; border-bottom: 1px solid #334155; padding-bottom: 4px;">
-          Detected Findings (${(auditReport.issues || []).length})
+      <!-- Executive Summary Block -->
+      <div style="margin-bottom: 14px; background-color: #f8fafc; padding: 14px; border-radius: 8px; border: 1px solid #e2e8f0; page-break-inside: avoid; break-inside: avoid;">
+        <h3 style="margin: 0 0 6px 0; font-size: 11px; font-weight: 800; color: #4338ca; text-transform: uppercase; letter-spacing: 0.5px;">
+          Executive Summary
         </h3>
+        <p style="margin: 0; font-size: 11px; color: #334155; line-height: 1.5; text-align: justify;">
+          ${this.escapeHtml(auditReport.auditSummary)}
+        </p>
+      </div>
+
+      <!-- 2 Column Assessment Table for html2canvas compatibility -->
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px; page-break-inside: avoid; break-inside: avoid;">
+        <tr>
+          <td style="width: 49%; vertical-align: top; padding-right: 1%;">
+            <div style="background-color: #fff1f2; padding: 12px; border-radius: 8px; border: 1px solid #fecdd3; height: 100%; box-sizing: border-box;">
+              <h3 style="margin: 0 0 6px 0; font-size: 11px; font-weight: 800; color: #e11d48; text-transform: uppercase; letter-spacing: 0.5px;">
+                Security & OWASP Assessment
+              </h3>
+              <p style="margin: 0; font-size: 11px; color: #334155; line-height: 1.45;">
+                ${this.escapeHtml(auditReport.securityAssessment)}
+              </p>
+            </div>
+          </td>
+          <td style="width: 49%; vertical-align: top; padding-left: 1%;">
+            <div style="background-color: #f5f3ff; padding: 12px; border-radius: 8px; border: 1px solid #ddd6fe; height: 100%; box-sizing: border-box;">
+              <h3 style="margin: 0 0 6px 0; font-size: 11px; font-weight: 800; color: #7c3aed; text-transform: uppercase; letter-spacing: 0.5px;">
+                SOLID Principles Compliance
+              </h3>
+              <p style="margin: 0; font-size: 11px; color: #334155; line-height: 1.45;">
+                ${this.escapeHtml(auditReport.solidComplianceNotes)}
+              </p>
+            </div>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Findings List -->
+      <div style="margin-top: 14px;">
+        <div style="border-bottom: 1px solid #cbd5e1; padding-bottom: 6px; margin-bottom: 12px;">
+          <h3 style="margin: 0; font-size: 13px; font-weight: 800; color: #0f172a;">
+            Detected Findings and Vulnerabilities (${(auditReport.issues || []).length})
+          </h3>
+        </div>
         ${issuesHtml}
       </div>
 
-      <div style="margin-top: 20px; padding-top: 10px; border-top: 1px solid #334155; font-size: 9px; color: #64748b; text-align: center;">
-        Generated by PR Code Auditor AI (Google ADK & FastMCP)
+      <!-- Footer -->
+      <div style="margin-top: 24px; padding-top: 10px; border-top: 1px solid #e2e8f0; font-size: 9px; color: #94a3b8; text-align: center; page-break-inside: avoid;">
+        Generated by PR Code Auditor AI (Google ADK & FastMCP Server) • Confidential Engineering Report
       </div>
     `;
 
     const opt = {
-      margin: [8, 8, 8, 8],
+      margin: [10, 10, 10, 10],
       filename: `PR_Audit_Report_${repoNameSafe}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, backgroundColor: '#0b0f19' },
+      html2canvas: { scale: 2.5, useCORS: true, backgroundColor: '#ffffff' },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
