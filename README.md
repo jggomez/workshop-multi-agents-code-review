@@ -444,7 +444,7 @@ Build an Agent application using **Google Agent Development Kit (ADK)**. Create 
 
 #### Antigravity CLI Prompt
 ```text
-Create an agent application using ADK (Agent Development Kit) with best practices. Create an agent that reviews pull requests from a repository provided by the user, reviews all files, and performs a code audit, detecting code smells, bad coding practices, vulnerabilities, and everything related, and finally provides a technical report. This agent must use the tools of the MCP server created using the streamable-http protocol and the toolset class provided by ADK. Apply best practices for agent instructions in English, including role, responsibility, objective, guardrails, and tool descriptions. The agent must provide a structured output. Use the Gemini 2.5 Flash Lite model, with best practices for retries. Additionally, create evaluations to verify its correct operation; perform at least 5 evaluations. Expose this agent via streaming with the ADK libraries to be called by a frontend. Use uv for the dependency management.
+Create an agent application using ADK (Agent Development Kit) with best practices. Create an agent that reviews pull requests from a repository provided by the user, reviews all files, and performs a code audit, detecting code smells, bad coding practices, vulnerabilities, and everything related, and finally provides a technical report. This agent must use the tools of the MCP server created using the streamable-http protocol and the toolset class provided by ADK. Apply best practices for agent instructions in English, including role, responsibility, objective, guardrails, and tool descriptions. The agent must provide a structured output. Use the Gemini 3.5 Flash Lite model in the global region, with best practices for retries. Additionally, create evaluations with ADK to verify its correct operation; perform at least 10 evaluations. Expose this agent via streaming with the ADK libraries to be called by a frontend. Use uv for the dependency management. Create a .env file and add environment variables for the MCP server and the models, following the best practices.
 ```
 
 #### Verification Command
@@ -469,7 +469,7 @@ Enhance the ADK multi-agent architecture by introducing `critical_reviewer_agent
 
 #### Antigravity CLI Prompt
 ```text
-Add a new critical agent that uses the Gemini-2.5-flash model to analyze the report, also view the repository, and evaluate if it has been fully detected and if the findings found by the research agent are correct or if findings are missing, and pass these as feedback to the research agent. This is a critical reviewer using the loop pattern. At the end, the report is generated. Increase the quality of the evaluations, and add other rubrics to validate this.
+Add a new critical agent that uses the Gemini-3.5-flash model in the global region to analyze the report, also view the repository, and evaluate if it has been fully detected and if the findings found by the research agent are correct or if findings are missing, and pass these as feedback to the research agent. This is a critical reviewer using the loop pattern. At the end, the report is generated for another agent to create the final report. Increase the quality of the evaluations, and add other rubrics to validate this. Create a .env file and add environment variables
 ```
 
 #### Verification Command
@@ -485,16 +485,46 @@ cd pr-auditor-agent && uv run pytest tests/unit/test_loop_agent.py
 Develop a single-page frontend application using HTML5, Tailwind CSS, and Vanilla JavaScript adhering to Clean Architecture principles (Domain, Use Cases, Infrastructure, Presentation). The UI must visualize real-time agent pipeline execution, stream logs via SSE, display the structured technical report, and export clean PDF documents.
 
 #### Architecture Details
-* UI Sections:
-  * Hero banner with quick-fill repository buttons (`octocat/Hello-World`, `google/adk-python`).
-  * Live Agent Execution Pipeline (Progress bar + Status cards for Investigator, Critic, and Report Generator).
-  * Streaming Console Feed with log filtering and clear actions.
-  * Technical Report Container with quality score badge, executive summary, OWASP assessment, SOLID breakdown, and severity filters (Critical, High, Medium, Low).
-  * PDF Exporter using `html2pdf.js` with print-optimized CSS overrides.
+* UI Sections & Components:
+  * **Top Header & Navigation Bar**:
+    * Branding logo (`PR Code Auditor AI` with gradient title and metadata subtitle `Google ADK • FastMCP • A2UI Protocol`).
+    * Navigation tab switcher with dual options: `Technical Audit` tab (`#tabDashboardBtn`) and `A2UI Interactive Chat` tab (`#tabChatBtn`).
+    * Backend connection indicator badge (`ADK Backend Conectado (8000)` / `Verifying ADK Backend...`).
+  * **Hero Input Section**:
+    * Architecture badge (`Multi-Agent Architecture ('SequentialAgent' + 'LoopAgent')`).
+    * Header title (`Real-Time Pull Request Code & Security Audit`) and description paragraph.
+    * Input form containing repository text field with GitHub icon (`octocat/Hello-World` default), `Audit Pull Requests` action button (`#startBtn`), and `Demo Mode` button (`#demoBtn`).
+    * Quick-fill example preset buttons (`octocat/Hello-World`, `pallets/flask`, `fastapi/fastapi`).
+  * **ADK Agent Pipeline Visualizer**:
+    * Section title (`ADK Agent Pipeline Execution`) and live percentage status text (`progressText`).
+    * Global progress bar (`#progressBar`) with gradient styling.
+    * 3 Agent Status Cards grid:
+      1. `pr_investigator_agent`: Senior Code Security & Quality Auditor, model badge `gemini-2.5-flash-lite`, status badge (`Pending`/`Investigating`/`Investigated`), and tool calls description (`list_open_pull_requests`, `get_file_content`).
+      2. `critical_reviewer_agent`: Principal Code Audit Critic (`LoopAgent`), model badge `gemini-2.5-flash`, status badge (`Pending`/`Reviewing`/`Approved`), and tool call description (`approve_audit()`).
+      3. `pr_report_agent`: Technical Report Generator, schema badge `PRCodeAuditReport`, status badge (`Pending`/`Synthesizing`/`Completed`).
+  * **Streaming Event Console (ADK SSE Feed)**:
+    * Mac-style window header with terminal controls (red/yellow/green dots), section title `Streaming Event Console (ADK SSE Feed)`, and `Clear` log button (`#clearConsoleBtn`).
+    * Live scrollable console feed streaming timestamped agent execution logs with color-coded agent tags (`[pr_investigator_agent]`, `[critical_reviewer_agent]`, `[pr_report_agent]`, `[SYSTEM]`).
+  * **Technical Report & Findings View**:
+    * Technical report header: PDF export action banner (`Generated Technical Report`, `Export Report to PDF` button `#exportPdfBtn`).
+    * Score summary header: `Code Audit Results`, metadata tag `PR Code Audit Report`, `Generated by Google ADK & MCP GitHub Server`, score gauge ring (`72 SCORE`), and verdict badge (`Requires Refinement` / `REVIEW REQUIRED`).
+    * Summary cards grid: `EXECUTIVE SUMMARY`, `SECURITY & OWASP`, and `SOLID PRINCIPLES`.
+    * Findings list: Filter tabs (`All`, `Critical`, `High`, `Medium`, `Low`) with count pill (`4 findings`), and detailed vulnerability cards featuring severity badges (`CRITICAL`), target file/line references (`src/auth_service.py:42`), issue title, description, and green light recommendation box (`Recomendación:`).
 
 #### Antigravity CLI Prompt
 ```text
-Create a frontend application using HTML, Tailwind, and Vanilla JS. This application must allow the user to enter a URL of the repository they want to evaluate its pull requests. The frontend must show the available agents and show the user in real-time which step it is in, giving information all the time. At the end, it must give the user the organized report with the option to export to PDF. Analyze and implement UX/UI best practices.
+Create a frontend application using HTML5, Tailwind CSS, and Vanilla JS following Clean Architecture principles (Domain, Use Cases, Infrastructure, Presentation). The application must feature a top navigation header with tabs for "Technical Audit" and "A2UI Interactive Chat", alongside a backend connection status indicator.
+
+The Technical Audit section must include:
+1. Hero input banner: Title "Real-Time Pull Request Code & Security Audit", subtitle explaining ADK multi-agent evaluation via FastMCP, repository URL input field with preset buttons (octocat/Hello-World, pallets/flask, fastapi/fastapi), "Audit Pull Requests" button, and "Demo Mode" button.
+2. ADK Agent Pipeline Execution visualizer: Live progress bar and 3 agent status cards for:
+   - pr_investigator_agent (gemini-3.5-flash-lite): Senior Code Security & Quality Auditor.
+   - critical_reviewer_agent (gemini-3.5-flash): Principal Code Audit Critic (LoopAgent).
+   - pr_report_agent: Technical Report Generator (Pydantic schema PRCodeAuditReport).
+3. Streaming Event Console (ADK SSE Feed): Dark terminal box with window dots, clear button, and real-time timestamped log feed for agent events.
+4. Technical Report container: Score gauge ring (e.g. 72 SCORE), verdict badge ("REVIEW REQUIRED"), 3 overview cards (Executive Summary, Security & OWASP, SOLID Principles), severity filter pills (All, Critical, High, Medium, Low), detailed vulnerability cards with file paths (src/auth_service.py:42), issue details, recommendations, and an "Export Report to PDF" button using html2pdf.js.
+
+Ensure UX/UI best practices with smooth transitions, dark mode aesthetics, glassmorphism, and client-side failover to Demo Mode if the backend is unreachable.
 ```
 
 #### Verification Command
@@ -507,15 +537,32 @@ cd pr-auditor-frontend && python3 -m http.server 3000
 ### Step 5: Integrate Conversational Chat with A2UI Protocol
 
 #### Objective
-Add a conversational chat tab to the frontend powered by the **A2UI Protocol v0.9** using the `a2ui-agent-sdk` Python package. The agent emits structured A2UI JSON surface definitions over the SSE stream, which the client-side JavaScript engine parses and renders into dynamic, interactive UI widgets (cards, score badges, action buttons).
+Add an interactive conversational chat tab to the frontend powered by the **A2UI Protocol v0.9** using the `a2ui-agent-sdk` Python package. The agent emits structured A2UI JSON surface definitions over the SSE stream, which the client-side JavaScript engine parses and renders into dynamic, interactive UI widgets (cards, score badges, action buttons).
 
 #### Architecture Details
-* Backend Integration: `a2ui-agent-sdk` wrapper generating `A2UI Component Trees`.
-* Frontend Renderer: `A2uiParser.js` and `A2uiRenderer.js` converting A2UI JSON payloads into native DOM nodes inside the chat message feed.
+* **Header Tab Integration**: Switch seamlessly between `Technical Audit` view and `A2UI Interactive Chat` view (`#chatSection`) using the top header navigation.
+* **Chat Header & Banner**:
+  * Title: `A2UI Agent Conversational Chat`.
+  * Subtitle: `Powered by 'a2ui-agent-sdk' (Python) and A2UI Protocol v0.9`.
+  * Context hint: `Escribe tu mensaje o proporciona la URL del repositorio`.
+* **Interactive Message Feed**:
+  * User message bubbles and agent response bubbles.
+  * System event indicators (e.g., `Synthesizing validated findings into Pydantic schema PRCodeAuditReport...`).
+  * Live **A2UI Surface Cards**: Streamed declarative component trees rendered dynamically into interactive card widgets featuring score badges (`Quality Score: 72/100 [Verdict: REVIEW REQUIRED]`), executive summaries, security assessment summaries, and clickable action triggers.
+* **Input Control**: Bottom chat bar with text area (`Type your message or enter repository (e.g. octocat/Hello-World)...`) and send action button.
+* **Backend Integration**: `a2ui-agent-sdk` library in `pr-auditor-agent` generates `A2UI Component Trees`.
+* **Frontend Renderer**: `A2uiParser.js` and `A2uiRenderer.js` in `pr-auditor-frontend/src/infrastructure/` convert incoming A2UI JSON payloads into native interactive DOM elements.
 
 #### Antigravity CLI Prompt
 ```text
-Also, create a chat option in the frontend, where it starts by asking the user for the repository and then the agents must use the A2UI protocol, using this a2ui-agent-sdk library with Python. Review the necessary skills for this.
+Add a conversational chat tab to the frontend application powered by the A2UI Protocol v0.9 and the a2ui-agent-sdk Python package.
+
+Requirements:
+1. Header Navigation: Enable switching between the "Technical Audit" dashboard and the "A2UI Interactive Chat" section.
+2. Chat UI Layout: Build a chat container featuring the header title "A2UI Agent Conversational Chat" (subtext: "Powered by `a2ui-agent-sdk` (Python) and A2UI Protocol v0.9"), a scrollable message history feed, and a bottom input field with a send button ("Type your message or enter repository (e.g. octocat/Hello-World)...").
+3. A2UI Surface Rendering: Implement client-side `A2uiParser` and `A2uiRenderer` modules to intercept A2UI JSON payloads streamed from the backend SSE server.
+4. Interactive Surfaces: Render rich dynamic UI cards within chat messages displaying repository audit surfaces (`PR Code Audit Surface`), quality score badges (`Quality Score: 72/100 [Verdict: REVIEW REQUIRED]`), Executive Summaries, OWASP Security Assessments, and interactive action buttons.
+5. Backend Agent Integration: Use `a2ui-agent-sdk` in the Python ADK backend to construct A2UI component trees and stream them to the client. Follow best practices for the A2UI Protocol v0.9.
 ```
 
 ---
@@ -535,7 +582,7 @@ Expose the ADK agents using the open **A2A (Agent-to-Agent)** specification. Pro
 
 #### Antigravity CLI Prompt
 ```text
-We are going to use the A2A protocol between agents. Expose the agents with this protocol. If you need to, review this info: https://adk.dev/a2a/intro/. Also, you can put all agent URLs and card URLs in the .env file.
+We are going to use the A2A protocol between agents. Expose the agents with this protocol. If you need to, review this info: https://adk.dev/a2a/intro/. Also, you can put all agent URLs and card URLs in the .env file. Follow the best practices for this protocol.
 ```
 
 #### Verification Command
